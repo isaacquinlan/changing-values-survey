@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changing Values: Today vs 2060</title>
+<style>
+  :root { --ink:#172033; --muted:#5b6475; --line:#d9deea; --blue:#3157c8; --bg:#f5f7fb; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--ink); line-height:1.5; }
+  main { max-width:900px; margin:0 auto; padding:28px 16px 48px; }
+  header { background:#172033; color:white; padding:28px; border-radius:18px; margin-bottom:22px; }
+  header h1 { margin:0 0 8px; font-size:clamp(1.7rem,4vw,2.4rem); }
+  header p { margin:0; color:#e1e7f5; }
+  .intro,.survey-card,.success,.notice { background:white; border:1px solid var(--line); border-radius:16px; padding:20px; margin:16px 0; }
+  .values { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; margin-top:14px; }
+  .value { border-radius:12px; padding:13px; background:#f5f7fb; }
+  .value strong { display:block; margin-bottom:4px; }
+  .value small { color:var(--muted); }
+  h2 { margin:0 0 8px; font-size:1.35rem; }
+  .muted { color:var(--muted); }
+  .plot-wrap { max-width:560px; margin:12px auto 0; }
+  svg { display:block; width:100%; height:auto; touch-action:manipulation; }
+  .triangle-hit { fill:#f8faff; stroke:#596780; stroke-width:2.2; cursor:crosshair; }
+  .gridline { stroke:#d4daea; stroke-width:1; stroke-dasharray:4 5; pointer-events:none; }
+  .vertex-label { font-size:13px; font-weight:700; fill:#172033; }
+  .helper-label { font-size:11px; fill:#5b6475; }
+  .selected-dot { fill:#3157c8; stroke:white; stroke-width:3; pointer-events:none; }
+  .selected-cross { stroke:white; stroke-width:2; pointer-events:none; }
+  .plot-instructions { font-size:.92rem; color:var(--muted); margin:8px 0 0; text-align:center; }
+  .result { margin-top:12px; padding:12px; border-radius:10px; background:#f2f5fc; font-size:.94rem; }
+  label { display:block; font-weight:600; margin-bottom:6px; }
+  input[type=text] { width:100%; max-width:420px; padding:12px; border:1px solid #bfc7d8; border-radius:9px; font:inherit; }
+  button { border:0; border-radius:10px; padding:12px 18px; font:inherit; font-weight:700; cursor:pointer; }
+  .primary { background:var(--blue); color:white; }
+  .secondary { background:#e9edf7; color:var(--ink); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+  .success { border-color:#a5d6b4; background:#f0fbf3; }
+  .hidden { display:none; }
+  footer { color:var(--muted); font-size:.86rem; padding:8px 2px; }
+  @media(max-width:520px) { header { padding:22px 18px; } .intro,.survey-card { padding:16px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Changing Values</h1>
+    <p>How should society balance three important values today and in 2060?</p>
+  </header>
+
+  <section class="intro">
+    <h2>About this survey</h2>
+    <p>For each triangle, click <strong>one point</strong> to show the balance you think society should give to the three values. The closer your point is to a corner, the more weight you give that value. A point near the centre means a more balanced mix.</p>
+    <div class="values">
+      <div class="value"><strong>Human Wellbeing</strong><small>Health, happiness and quality of life.</small></div>
+      <div class="value"><strong>Individual Autonomy / Freedom</strong><small>People's ability to make their own choices.</small></div>
+      <div class="value"><strong>Equality / Social Fairness</strong><small>Fair opportunities, treatment and distribution of resources.</small></div>
+    </div>
+  </section>
+
+  <form id="survey">
+    <section class="survey-card">
+      <h2>1. Society today (2026)</h2>
+      <p class="muted">How should society balance these values today?</p>
+      <div class="plot-wrap">
+        <svg id="plot-now" viewBox="0 0 520 450" role="img" aria-label="Interactive triangle for society today"></svg>
+      </div>
+      <p class="plot-instructions">Click once inside the triangle. You can click again to change your answer.</p>
+      <div class="result" id="result-now">No point selected yet.</div>
+    </section>
+
+    <section class="survey-card">
+      <h2>2. Society in 2060</h2>
+      <p class="muted">Think about how society might look in the year 2060. Advances in artificial intelligence, automation and digital technology may change how people work, access healthcare, make decisions and interact with each other. Governments and communities may face difficult choices about how to distribute resources, protect individual freedoms and ensure fair treatment.</p>
+      <p class="muted">How should society balance these values in 2060?</p>
+      <div class="plot-wrap">
+        <svg id="plot-future" viewBox="0 0 520 450" role="img" aria-label="Interactive triangle for society in 2060"></svg>
+      </div>
+      <p class="plot-instructions">Click once inside the triangle. You can click again to change your answer.</p>
+      <div class="result" id="result-future">No point selected yet.</div>
+    </section>
+
+    <section class="survey-card">
+      <div class="actions">
+        <button class="primary" id="submit" type="submit" disabled>Submit answers</button>
+        <button class="secondary" id="reset" type="button">Clear answers</button>
+      </div>
+    </section>
+  </form>
+
+  <section class="success hidden" id="success" aria-live="polite">
+    <strong>Thanks — your response has been recorded.</strong>
+  </section>
+
+  <section class="success hidden" id="locked" aria-live="polite">
+    <strong>You've already responded.</strong>
+    <p>This browser has already submitted a response for this survey, so the form is locked to prevent duplicates.</p>
+  </section>
+
+  <footer>UCD MIS20070 Digital Society • Section 2: Changing Values • Survey prototype</footer>
+</main>
+
+<script>
+(async () => {
+  const NS = "http://www.w3.org/2000/svg";
+  const V = {
+    A: {x:260, y:55},   // wellbeing top
+    B: {x:65, y:375},   // autonomy bottom-left
+    C: {x:455, y:375}   // equality bottom-right
+  };
+  const answers = { now:null, future:null };
+  const names = ["Human Wellbeing", "Individual Autonomy / Freedom", "Equality / Social Fairness"];
+  const LOCK_KEY = "changingValuesSurvey_submitted";
+  const HEADER = ["timestamp_utc","today_human_wellbeing_pct","today_individual_freedom_pct","today_equality_fairness_pct","2060_human_wellbeing_pct","2060_individual_freedom_pct","2060_equality_fairness_pct"];
+
+  // Paste the /exec URL from your Google Apps Script Web App deployment here.
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxG2wwYxKjnmB25mFEzjPsGiKeekhuQhNWiN-JraCNR7VO_dDbCFGKcteGH1qc7y-PROA/exec";
+
+  function csvFromRows(rows) {
+    return rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\r\n");
+  }
+  function downloadCsv(filename, csv) {
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=filename;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  if (localStorage.getItem(LOCK_KEY)) {
+    document.getElementById("survey").classList.add("hidden");
+    document.getElementById("locked").classList.remove("hidden");
+    return;
+  }
+
+  function el(tag, attrs={}, text) {
+    const node = document.createElementNS(NS, tag);
+    Object.entries(attrs).forEach(([k,v]) => node.setAttribute(k, v));
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+  function drawPlot(id, key) {
+    const svg = document.getElementById(id);
+    svg.innerHTML = "";
+    // Light guide lines at 20% increments.
+    for (let t=0.2; t<1; t+=0.2) {
+      const p1 = {x: V.A.x*(1-t)+V.B.x*t, y: V.A.y*(1-t)+V.B.y*t};
+      const p2 = {x: V.A.x*(1-t)+V.C.x*t, y: V.A.y*(1-t)+V.C.y*t};
+      svg.appendChild(el("line", {x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,class:"gridline"}));
+      const q1 = {x: V.A.x*(1-t)+V.B.x*t, y: V.A.y*(1-t)+V.B.y*t};
+      const q2 = {x: V.C.x*(1-t)+V.B.x*t, y: V.C.y*(1-t)+V.B.y*t};
+      svg.appendChild(el("line", {x1:q1.x,y1:q1.y,x2:q2.x,y2:q2.y,class:"gridline"}));
+      const r1 = {x: V.A.x*(1-t)+V.C.x*t, y: V.A.y*(1-t)+V.C.y*t};
+      const r2 = {x: V.B.x*(1-t)+V.C.x*t, y: V.B.y*(1-t)+V.C.y*t};
+      svg.appendChild(el("line", {x1:r1.x,y1:r1.y,x2:r2.x,y2:r2.y,class:"gridline"}));
+    }
+    svg.appendChild(el("polygon", {points:`${V.A.x},${V.A.y} ${V.B.x},${V.B.y} ${V.C.x},${V.C.y}`,class:"triangle-hit",id:`${key}-triangle`}));
+    svg.appendChild(el("text",{x:260,y:28,"text-anchor":"middle",class:"vertex-label"},"Human Wellbeing"));
+    svg.appendChild(el("text",{x:65,y:402,"text-anchor":"start",class:"vertex-label"},"Individual Freedom"));
+    svg.appendChild(el("text",{x:455,y:402,"text-anchor":"end",class:"vertex-label"},"Equality / Fairness"));
+    svg.appendChild(el("text",{x:260,y:430,"text-anchor":"middle",class:"helper-label"},"Click anywhere inside the triangle"));
+    const dot = el("circle",{cx:0,cy:0,r:9,class:"selected-dot",id:`${key}-dot`,visibility:"hidden"});
+    svg.appendChild(dot);
+    const cross = el("path",{d:"",id:`${key}-cross`,visibility:"hidden",class:"selected-cross"});
+    svg.appendChild(cross);
+    svg.addEventListener("click", ev => {
+      const p = svg.createSVGPoint();
+      p.x = ev.clientX; p.y = ev.clientY;
+      const local = p.matrixTransform(svg.getScreenCTM().inverse());
+      const weights = pointToWeights(local.x, local.y);
+      if (!weights) return;
+      answers[key] = weights;
+      dot.setAttribute("cx",local.x); dot.setAttribute("cy",local.y); dot.setAttribute("visibility","visible");
+      cross.setAttribute("d",`M ${local.x-4} ${local.y-4} L ${local.x+4} ${local.y+4} M ${local.x+4} ${local.y-4} L ${local.x-4} ${local.y+4}`);
+      cross.setAttribute("visibility","visible");
+      renderResult(key);
+      document.getElementById("submit").disabled = !(answers.now && answers.future);
+      document.getElementById("success").classList.add("hidden");
+    });
+  }
+  function pointToWeights(x,y) {
+    const ax=V.A.x, ay=V.A.y, bx=V.B.x, by=V.B.y, cx=V.C.x, cy=V.C.y;
+    const den=(by-cy)*(ax-cx)+(cx-bx)*(ay-cy);
+    const a=((by-cy)*(x-cx)+(cx-bx)*(y-cy))/den;
+    const b=((cy-ay)*(x-cx)+(ax-cx)*(y-cy))/den;
+    const c=1-a-b;
+    if (a < -0.015 || b < -0.015 || c < -0.015) return null;
+    const vals=[a,b,c].map(v=>Math.max(0,v));
+    const total=vals.reduce((s,v)=>s+v,0);
+    return vals.map(v=>Math.round(v/total*1000)/10);
+  }
+  function renderResult(key) {
+    const w=answers[key];
+    document.getElementById(key==="now"?"result-now":"result-future").innerHTML =
+      `<strong>Your selected balance</strong><br>${names[0]}: ${w[0]}% · ${names[1]}: ${w[1]}% · ${names[2]}: ${w[2]}%`;
+  }
+  drawPlot("plot-now","now");
+  drawPlot("plot-future","future");
+
+  document.getElementById("survey").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!answers.now || !answers.future) return;
+    const submitBtn = document.getElementById("submit");
+    submitBtn.disabled = true;
+    const timestamp = new Date().toISOString();
+    try {
+      if (SCRIPT_URL.startsWith("http")) {
+        await fetch(SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {"Content-Type": "text/plain;charset=utf-8"},
+          body: JSON.stringify({ timestamp, today: answers.now, future: answers.future })
+        });
+      } else {
+        const row=[timestamp,...answers.now,...answers.future];
+        downloadCsv(`changing-values-response-${Date.now()}.csv`, csvFromRows([HEADER, row]));
+      }
+      localStorage.setItem(LOCK_KEY, "1");
+      document.getElementById("survey").classList.add("hidden");
+      document.getElementById("success").classList.remove("hidden");
+      document.getElementById("success").scrollIntoView({behavior:"smooth",block:"center"});
+    } catch (err) {
+      submitBtn.disabled = false;
+      const result = document.getElementById(answers.future ? "result-future" : "result-now");
+      result.innerHTML += `<br><strong>Submit failed — try again.</strong>`;
+    }
+  });
+  document.getElementById("reset").addEventListener("click",()=>{
+    answers.now=null; answers.future=null;
+    drawPlot("plot-now","now"); drawPlot("plot-future","future");
+    document.getElementById("result-now").textContent="No point selected yet.";
+    document.getElementById("result-future").textContent="No point selected yet.";
+    document.getElementById("submit").disabled=true;
+    document.getElementById("success").classList.add("hidden");
+  });
+})();
+</script>
+</body>
+</html>
